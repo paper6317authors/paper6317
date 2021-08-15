@@ -18,7 +18,7 @@ Obstacle Setup             |  Plan Execution Example 1           |  Plan Executi
 
 We analytically encode these plans into a 6D latent space, corresponding to the initial, the final, and an intermediate planned position of the box. Please also see experiment 2 for a discussion of different types of encoding.
 
-We compare against the baselines introduced in section 5.3 of the original version of the paper.
+We compare against the baselines introduced in section 5.3 of the original version of the original version of the paper, as well as against the additional baseline on combining planning and learning that we introduce in Experiment 2.
 
 ## Motivation
 Obstacle avoidance is a notoriously hard problem in robotics.
@@ -36,8 +36,8 @@ The runs are not fully finished yet; results are updated regularly.
 ![](figs/results_pushing_obstacle.png)
 
 ## Preliminary Results
-L2E performs significantly better than the pure learning HER baselines, as well as the pure planning baseline ("Plan", in blue).
-Currently, the runs are not fully finished, but initial results indicate that the performance of L2E is already comparable to the performance of the "Plan + IM" baseline.
+L2E performs significantly better than the pure learning HER baselines, the pure planning baseline ("Plan"), and the “Planned Subgoals + RL” baseline.
+Currently, the runs are not fully finished, but initial results indicate that the performance of L2E exceeds the performance of the "Plan + IM" baseline as well.
 The "Plan + IM" baseline executes the plan using an inverse model learned from data.
 
 In comparison with the pushing experiment in the original version of the paper, L2E learns slower.
@@ -49,9 +49,52 @@ In contrast, the "Plan + IM" baseline is independent of the size of the plan spa
 This experiment reveals the following two aspects:
 First, it reveals the importance of approximate plans in more complicated scenes, as illustrated by the difference between HER and L2E.
 Even using HER, standard RL is not able to solve the task.
+This even holds true if the RL agent is supported by a long-horizon planner that provides short-horizon subgoals, as illustrated by the difference between the “Planned Subgoals + RL” baseline and L2E.
+
 Second, comparing L2E to the pushing example in the original version of the paper, it highlights that for larger plan spaces, more data is needed to train the L2E agent.
 
-# Experiment 2: Plan encoding
+# Experiment 2: Additional Baseline on Combining Planning and Learning
+We added this baseline to compare against more methods that, like L2E, also combine learning and planning.
+
+Here we use the planner to create a sequence of subgoals that can be navigated by a RL agent. This approach is inspired by PRM-RL [Faust et al. 2017]; we will refer to it as “Planned Subgoals + RL”.
+
+## Description
+We use the planner to provide subgoals to the RL agent. The subgoal is selected as a box position on the plan that is 0.3 (1/10 of the table length) away from the current box position.
+Once the subgoal is reached (tolerance 0.1), the next subgoal is selected.
+
+Thus, long-term planning is provided by the planning module.
+The RL agent on the other hand is tasked with learning the dynamics of the system to reach relatively short-term goals.
+This RL agent is conditioned on subgoals, and trained using HER.
+We use the sampling strategies "Episode 5" in case of the pushing environment included in original version, and "Future 5" in case of the obstacle environment. These performed best on the respective environment when used without any planning.
+
+## Motivation
+We added this baseline as an additional method (apart from the "Plan+IM" baseline) that also combines learning and planning.
+While the "Plan+IM" baseline uses an inverse dynamics model to learn immediate actions that reach the next planned state, the “Planned Subgoals + RL” baseline allows the RL agent to learn behavior that lasts for longer than one time step.
+Still, the RL agent does not need to reason about long-term behavior like the pure HER agents have to, since this is covered by the high-level planner.
+
+## Experiment Status
+The following figures show the performance of “Planned Subgoals + RL” compared to L2E as well as to the other baselines. Results are shown in both the pushing environment included in the original version of the paper, as well as the obstacle environment that was added during the review.
+Some of the runs are not fully finished yet; results are updated regularly.
+
+![](figs/results_pushing.png) |![](figs/results_pushing_obstacle.png) 
+:-------------------------:|:-------------------------:
+Pushing environment included in original version             |  Obstacle environment added during the review
+
+## Preliminary Results
+In the pushing environment included in original version, we find that the “Planned Subgoals + RL” baseline outperforms all other baselines that we initially included, but still shows lower performance than both versions of L2E.
+
+In the obstacle environment added during the review, we find that “Planned Subgoals + RL” performs significantly worse than the L2E agents, as well as significantly worse than the “Plan + IM” baseline.
+
+## Preliminary Discussion
+In the pushing environment included in original version, using a learned policy that acts for multiple time steps in order to reach a subgoal (“Planned Subgoals + RL”) seems advantageous over using an inverse model that can only perform a single action (“Plan + IM”) to follow the plan.
+However, L2E, which directly learns to execute entire plans using reward shaping, shows better performance compared to both baselines.
+
+The results in the obstacle environment indicate that this relative advantage of “Planned Subgoals + RL” over “Plan + IM” only holds true if the policy for reaching the local subgoal can be learned effectively.
+This seems to be more challenging in the obstacle environment, potentially due to the segmentation of the state space.
+Therefore, the “Plan + IM” baseline outperforms “Planned Subgoals + RL”.
+Again, given sufficient training time, L2E performs better than all baselines.
+
+# Experiment 3: Plan encoding
 ## Description
 We compare three different ways to encode the plan for the pushing environment shown in the original version of the paper:
 
@@ -88,7 +131,7 @@ We find that
 These results show that using an encoding is beneficial, even if it has to be learned.
 At least for the present example, using an analytical encoding was however more effective.
 
-# Experiment 3: Plan density
+# Experiment 4: Plan density
 
 ## Description
 We compare training the L2E agent using planned state sequences of different density.
